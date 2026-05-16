@@ -9,6 +9,32 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const rateLimit = require('express-rate-limit');
+
+// General API rate limiter
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,                  // max 100 requests per window per IP
+  standardHeaders: true,     // return rate limit info in RateLimit-* headers
+  legacyHeaders: false,
+  message: {
+    error: 'Too many requests, please try again later.',
+    retryAfter: '15 minutes'
+  }
+});
+
+// Stricter limiter for conversion endpoints (heavy operations)
+const conversionLimiter = rateLimit({
+  windowMs: 60 * 1000,  // 1 minute
+  max: 5,               // max 5 conversions per minute per IP
+  message: {
+    error: 'Too many conversion requests. Please wait before trying again.',
+    retryAfter: '1 minute'
+  }
+});
+
+app.use('/api', apiLimiter);
+app.use('/api/convert', conversionLimiter); // stricter for heavy endpoints
 
 // Middleware
 app.use(cors());
